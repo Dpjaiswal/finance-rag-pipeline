@@ -329,3 +329,6 @@ Useful semantic search examples:
 - Row-level security in PostgreSQL for defense in depth.
 - Rate limiting middleware backed by Redis.
 - OpenTelemetry traces and metrics.
+
+# finance-rag-pipeline
+
