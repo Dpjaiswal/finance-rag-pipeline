@@ -45,20 +45,81 @@ Local file storage is intentionally wrapped by `StorageService` so object storag
 
 ## Folder Structure
 
+Below is the complete project directory structure detailing all major source files, services, and modules:
+
 ```text
-app/
-  api/v1/endpoints/     FastAPI routers
-  core/                 config, security, logging, exception handlers
-  db/                   sessions and seed script
-  models/               SQLAlchemy models
-  repositories/         query/data-access helpers
-  services/             business workflows
-  rbac/                 permission constants
-  rag/                  embeddings, vector store, reranking
-  schemas/              Pydantic request/response models
-tests/                  pytest suite
-alembic/                migrations
+finance-rag-pipeline/
+├── alembic/                      # Database migration configurations
+│   ├── env.py                    # Alembic environment setup
+│   └── versions/                 # Migration script version history
+│       ├── 0001_initial.py
+│       └── 0002_add_agreement_document_type.py
+├── app/                          # Core application logic
+│   ├── api/                      # Routing and endpoint definitions
+│   │   ├── deps.py               # Reusable dependencies (Auth, DB, RBAC)
+│   │   └── v1/
+│   │       ├── router.py         # Main API router gathering sub-routers
+│   │       └── endpoints/        # Sub-routers for different services
+│   │           ├── auth.py       # Registration, Login, Token generation
+│   │           ├── documents.py  # File upload, retrieval, and listing
+│   │           ├── rag.py        # Indexing, searching, and context extraction
+│   │           └── rbac.py       # Role assignment and permissions verification
+│   ├── core/                     # Application configurations & global modules
+│   │   ├── config.py             # Pydantic base settings and env parsing
+│   │   ├── exceptions.py         # Custom HTTP and application exceptions
+│   │   ├── logging.py            # Loggers and standard output formatters
+│   │   └── security.py           # JWT creation, decoding, and password hashing
+│   ├── db/                       # Database engine setup and seed script
+│   │   ├── init_db.py            # DB engine and session factory creation
+│   │   ├── session.py            # Session getters and Declarative Base class
+│   │   └── seed.py               # Initial seed script for companies, users, roles
+│   ├── models/                   # SQLAlchemy database models
+│   │   ├── audit.py              # Audit log schemas
+│   │   ├── company.py            # Multi-tenant Company schema
+│   │   ├── document.py           # Document and DocumentChunk schemas
+│   │   ├── enums.py              # Status and Type Enums (StrEnum)
+│   │   ├── rbac.py               # Role, Permission, and Association tables
+│   │   └── user.py               # User authentication schema
+│   ├── rag/                      # RAG logic (Embeddings, Vector Store, Reranker)
+│   │   ├── embeddings.py         # Local / Hugging Face embedding generation
+│   │   ├── rerankers.py          # Fallback Lexical & Semantic reranking logic
+│   │   └── vector_store.py       # Qdrant client connection and payload indexing
+│   ├── rbac/                     # Permission sets and access control helpers
+│   │   ├── access.py             # User access and role matching logic
+│   │   └── permissions.py        # System-wide Permission code strings
+│   ├── repositories/             # Database queries and CRUD abstraction layers
+│   │   ├── documents.py          # Document querying logic
+│   │   ├── rbac.py               # Role & permission mapping queries
+│   │   └── users.py              # User retrieval and registration queries
+│   ├── schemas/                  # Pydantic validation and serialization models
+│   │   ├── auth.py               # Login, registration, token response models
+│   │   ├── common.py             # Reusable API response schemas
+│   │   ├── document.py           # Metadata, upload, listing schemas
+│   │   ├── rag.py                # Search query and context generation schemas
+│   │   └── rbac.py               # Role and permission response models
+│   ├── services/                 # Complex business logic orchestrators
+│   │   ├── audit.py              # Action recording services
+│   │   ├── auth.py               # JWT logic wrapper
+│   │   ├── documents.py          # Upload processing & storage operations
+│   │   ├── extraction.py         # File text extractors (PDF, DOCX, TXT)
+│   │   ├── rag.py                # Text splitting, vector indexing & search pipelines
+│   │   ├── rbac.py               # DB-level role/permission update operations
+│   │   └── storage.py            # Storage driver abstraction (Local/Cloud placeholder)
+│   ├── utils/                    # Shared helper utilities
+│   │   └── responses.py          # Unified response builder helpers
+│   └── main.py                   # FastAPI main entrypoint configuration
+├── tests/                        # Integration and unit tests
+│   ├── conftest.py               # Pytest configurations, DB session mocks, test clients
+│   ├── test_auth_rbac.py         # Authentication and authorization tests
+│   ├── test_documents.py         # Document lifecycle and metadata tests
+│   └── test_rag.py               # Chunking, indexing, and search tests
+├── .gitignore                    # Local files ignored by git
+├── alembic.ini                   # Alembic database migration CLI settings
+├── pyproject.toml                # Project metadata and tooling preferences
+├── requirements.txt              # Production and development pip dependencies
+└── README.md                     # Project documentation (this file)
 ```
+
 
 ## Database Schema
 
@@ -73,6 +134,95 @@ Core tables:
 - `documents`
 - `document_chunks`
 - `audit_logs`
+
+### Entity Relationship Diagram (ERD)
+
+Below is the Entity Relationship Diagram representing the database models, their attributes, and relationships. It is rendered using Mermaid:
+
+```mermaid
+erDiagram
+    COMPANIES {
+        int id PK
+        string name UK
+        datetime created_at
+    }
+    USERS {
+        int id PK
+        string full_name
+        string email UK
+        string password_hash
+        boolean is_active
+        int company_id FK
+        datetime created_at
+    }
+    ROLES {
+        int id PK
+        string name UK
+        string description
+        datetime created_at
+    }
+    PERMISSIONS {
+        int id PK
+        string code UK
+        string description
+    }
+    USER_ROLES {
+        int user_id PK, FK
+        int role_id PK, FK
+    }
+    ROLE_PERMISSIONS {
+        int role_id PK, FK
+        int permission_id PK, FK
+    }
+    DOCUMENTS {
+        int id PK
+        string title
+        int company_id FK
+        string company_name
+        string document_type
+        int uploaded_by_id FK
+        string file_name
+        string storage_key UK
+        string mime_type
+        int file_size
+        json tags
+        text description
+        string status
+        text extracted_text
+        boolean extracted_text_available
+        boolean indexed_in_vector_db
+        datetime created_at
+        datetime deleted_at
+    }
+    DOCUMENT_CHUNKS {
+        int id PK
+        string chunk_id UK
+        int document_id FK
+        int chunk_index
+        int page_number
+        text text
+        datetime created_at
+    }
+    AUDIT_LOGS {
+        int id PK
+        int user_id FK
+        string action
+        string target_type
+        string target_id
+        json metadata_json
+        datetime created_at
+    }
+
+    COMPANIES ||--o{ USERS : "has"
+    COMPANIES ||--o{ DOCUMENTS : "owns"
+    USERS ||--o{ DOCUMENTS : "uploads"
+    USERS ||--o{ AUDIT_LOGS : "triggers"
+    USERS ||--o{ USER_ROLES : "assigned"
+    ROLES ||--o{ USER_ROLES : "assigned_to"
+    ROLES ||--o{ ROLE_PERMISSIONS : "holds"
+    PERMISSIONS ||--o{ ROLE_PERMISSIONS : "held_by"
+    DOCUMENTS ||--o{ DOCUMENT_CHUNKS : "split_into"
+```
 
 Important constraints and indexes:
 
