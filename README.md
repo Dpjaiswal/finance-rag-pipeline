@@ -478,7 +478,6 @@ Useful semantic search examples:
 - More precise PDF page-level chunk metadata.
 - Row-level security in PostgreSQL for defense in depth.
 - Rate limiting middleware backed by Redis.
-- OpenTelemetry traces and metrics.
 
 # finance-rag-pipeline
 
