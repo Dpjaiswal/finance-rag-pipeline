@@ -327,8 +327,15 @@ This is cheap and deterministic. For higher precision, replace it with a cross-e
 
 ## Setup Steps
 
-For basic curl/OpenAPI testing, Docker is not required. The app defaults to a local SQLite database file named `local.db` and auto-creates/seeds tables on startup.
+For basic testing of Auth and Document uploads, Docker is not required (the app uses a local SQLite database file `local.db` by default). 
+However, to test **RAG features (Indexing & Search)**, you must have Qdrant running locally.
 
+### 1. Start Qdrant (Required for RAG)
+```bash
+docker run -p 6333:6333 -p 6334:6334 qdrant/qdrant
+```
+
+### 2. Start the Application
 ```bash
 python -m venv .venv
 . .venv/Scripts/activate
